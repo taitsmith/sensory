@@ -30,7 +30,9 @@ class MainViewModel @Inject constructor(
     private var sensor: Sensor =
         sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)!!
 
-    private var xyzArray = mutableListOf(0F, 0F, 0F)
+    private val _xyzArray = MutableLiveData<List<Float>>()
+    var xyzArray: LiveData<List<Float>> = _xyzArray
+
 
     private val _chartEntries = MutableLiveData<MutableList<ChartEntry>>()
     var chartEntries: LiveData<MutableList<ChartEntry>> = _chartEntries
@@ -42,32 +44,16 @@ class MainViewModel @Inject constructor(
 
     private var timerPeriodInMillis = 500L
 
-    //the sensor update returns a float out to seven or eight places, so the
-    // "simplest" thing to do  is format it as a string to two places, then go back to a float.
-    private fun updateX(x: Float) {
-        if (xyzArray[0] != x) {
-            xyzArray.add(0, "%.2f".format(x).toFloat())
-        }
-    }
-
-    private fun updateY(y: Float) {
-        if (xyzArray[1] != y) {
-            xyzArray.add(1, "%.2f".format(y).toFloat())
-        }
-    }
-
-    private fun updateZ(z: Float) {
-        if (xyzArray[2] != z) {
-            xyzArray.add(2, "%.2f".format(z).toFloat())
-        }
-    }
-
     //this gets called ~10 times per second
     override fun onSensorChanged(p0: SensorEvent?) {
         if (p0 != null) {
-            updateX(p0.values[0])
-            updateY(p0.values[1])
-            updateZ(p0.values[2])
+            updateArray(p0.values.asList())
+        }
+    }
+
+    private fun updateArray(valueList: List<Float>) {
+        viewModelScope.launch {
+          _xyzArray.postValue(valueList)
         }
     }
 
@@ -101,13 +87,15 @@ class MainViewModel @Inject constructor(
         _chartEntries.value?.clear()
         timer = fixedRateTimer("update values", false, 0L, timerPeriodInMillis) {
             viewModelScope.launch(Dispatchers.IO) {
-                val list = mutableListOf<ChartEntry>(
-                    entryOf(i, xyzArray[0]),
-                    entryOf(i, xyzArray[1]),
-                    entryOf(i, xyzArray[2])
-                )
-                _chartEntries.postValue(list)
-                i++
+                if (!xyzArray.value.isNullOrEmpty()) {
+                    val list = mutableListOf<ChartEntry>(
+                        entryOf(i, xyzArray.value!![0]),
+                        entryOf(i, xyzArray.value!![1]),
+                        entryOf(i, xyzArray.value!![2])
+                    )
+                    _chartEntries.postValue(list)
+                    i++
+                }
             }
         }
     }

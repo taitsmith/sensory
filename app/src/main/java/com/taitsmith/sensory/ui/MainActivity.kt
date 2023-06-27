@@ -2,16 +2,20 @@ package com.taitsmith.sensory.ui
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.core.snap
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -71,10 +75,12 @@ class MainActivity : ComponentActivity() {
     var entriesModelY: MutableList<ChartEntry> = mutableListOf()
     var entriesModelZ: MutableList<ChartEntry> = mutableListOf()
 
+    private var colorsList: List<Float> = mutableListOf(.5F, .5F, .5F)
+
     private val viewModel: MainViewModel by viewModels()
 
     @OptIn(ExperimentalMaterial3Api::class)
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "RememberReturnType")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setObservers()
@@ -91,7 +97,7 @@ class MainActivity : ComponentActivity() {
                         },
                         content = {
                             Icon(
-                                painter = painterResource(id = R.drawable.baseline_emergency_recording_24),
+                                painter = painterResource(id = R.drawable.baseline_play_arrow_24),
                                 contentDescription = "Activate the sensors",
                                 tint = Color.White
                             )
@@ -120,7 +126,7 @@ class MainActivity : ComponentActivity() {
                                         chartModelProducer = composedChartEntryModelProducer,
                                         startAxis = startAxis(),
                                         bottomAxis = bottomAxis(),
-                                        modifier = Modifier.fillMaxHeight(.66f),
+                                        modifier = Modifier.fillMaxHeight(.60f),
                                         diffAnimationSpec = snap()
                                     )
                                 }
@@ -128,11 +134,37 @@ class MainActivity : ComponentActivity() {
                             }
                             Row(
                                 Modifier
-                                    .fillMaxHeight()
+                                    .fillMaxHeight(.7f)
                                     .fillMaxWidth(),
                                 Arrangement.Center
                             ) {
                                 SliderView(viewModel = viewModel)
+                            }
+                            Row(
+                                Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                Arrangement.SpaceEvenly
+                            ){
+                                Box(
+                                    Modifier.background(shape = CircleShape, color = Color.Green)
+                                        .padding(16.dp)
+                                ) {
+                                    Icon(painter = painterResource(id = R.drawable.baseline_emergency_recording_24), contentDescription = "D")
+                                }
+                                Box(
+                                    Modifier.background(shape = CircleShape, color =Color.Red)
+                                        .padding(16.dp)
+                                ) {
+                                    Icon(painter = painterResource(id = R.drawable.baseline_emergency_recording_24), contentDescription = "D")
+                                }
+                                Box(
+                                    Modifier.background(shape = CircleShape, color = Color.Blue)
+                                        .padding(16.dp)
+                                ) {
+                                    Icon(painter = painterResource(id = R.drawable.baseline_emergency_recording_24), contentDescription = "D")
+                                }
                             }
                         }
                     }
@@ -148,6 +180,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setObservers() {
+        viewModel.xyzArray.observe(this) {
+            colorsList = it
+            Log.d("COLOR LIST", colorsList[0].toString())
+        }
         viewModel.chartEntries.observe(this) {
             entriesModelX.add(it[0])
             entriesModelY.add(it[1])
