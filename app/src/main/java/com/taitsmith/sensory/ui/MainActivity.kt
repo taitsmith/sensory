@@ -2,27 +2,34 @@ package com.taitsmith.sensory.ui
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.core.snap
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.axis.horizontal.bottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.startAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
@@ -37,6 +44,7 @@ import com.taitsmith.sensory.R
 import com.taitsmith.sensory.ui.theme.SensoryTheme
 import com.taitsmith.sensory.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -73,7 +81,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Scaffold(
-                modifier = Modifier.fillMaxSize(),
                 floatingActionButtonPosition = FabPosition.End,
                 floatingActionButton = {
                     FloatingActionButton(
@@ -95,13 +102,11 @@ class MainActivity : ComponentActivity() {
                 SensoryTheme {
                     // A surface container using the 'background' color from the theme
                     Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
+                        color = MaterialTheme.colorScheme.background,
+                        modifier = Modifier.fillMaxHeight()
                     ) {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxHeight()
-                            ) {
+                        Column() {
+                            Row() {
                                 ProvideChartStyle(rememberChartStyle(chartColors)) {
                                     val lineChartX = lineChart()
                                     val lineChartY = lineChart()
@@ -115,9 +120,19 @@ class MainActivity : ComponentActivity() {
                                         chartModelProducer = composedChartEntryModelProducer,
                                         startAxis = startAxis(),
                                         bottomAxis = bottomAxis(),
+                                        modifier = Modifier.fillMaxHeight(.66f),
+                                        diffAnimationSpec = snap()
                                     )
                                 }
 
+                            }
+                            Row(
+                                Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(),
+                                Arrangement.Center
+                            ) {
+                                SliderView(viewModel = viewModel)
                             }
                         }
                     }
@@ -132,11 +147,6 @@ class MainActivity : ComponentActivity() {
         viewModel.updateSensorStatus(false)
     }
 
-    override fun onResume() {
-        super.onResume()
-        viewModel.updateSensorStatus(true)
-    }
-
     private fun setObservers() {
         viewModel.chartEntries.observe(this) {
             entriesModelX.add(it[0])
@@ -145,16 +155,38 @@ class MainActivity : ComponentActivity() {
             chartEntryModelProducerX.setEntries(entriesModelX)
             chartEntryModelProducerY.setEntries(entriesModelY)
             chartEntryModelProducerZ.setEntries(entriesModelZ)
-            Log.d("OBSERVER", "observed")
         }
     }
 }
 
-
-
-@Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
-    SensoryTheme {
+fun SliderView(viewModel: MainViewModel) {
+    var updatesPerSecond by remember { mutableStateOf(5) }
+
+    Column() {
+        Row() {
+            Text("1")
+            Slider(
+                value = updatesPerSecond.toFloat(),
+                onValueChange = {
+                    updatesPerSecond = it.toInt()
+                    viewModel.updateTimerPeriod(it.toInt())
+                    },
+                valueRange = 1f..10f,
+                steps = 10,
+                modifier = Modifier.fillMaxWidth(.8f),
+            )
+            Text("10")
+        }
+        Row(
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxWidth(.8f),
+                    Arrangement.Center
+        ) {
+            Text(text = "$updatesPerSecond updates per second",
+
+                )
+        }
     }
 }
