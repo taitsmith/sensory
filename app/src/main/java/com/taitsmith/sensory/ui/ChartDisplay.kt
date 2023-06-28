@@ -58,6 +58,7 @@ fun ShowChart(chartProducer: ComposedChartEntryModelProducer<ChartEntryModel>) {
     }
 }
 
+//boilerplate chart things from the library
 @Composable
 internal fun rememberChartStyle(columnChartColors: List<Color>, lineChartColors: List<Color>): ChartStyle {
     val isSystemInDarkTheme = isSystemInDarkTheme()
@@ -99,6 +100,8 @@ internal fun rememberChartStyle(columnChartColors: List<Color>, lineChartColors:
     }
 }
 
+//tbd. takes up a ton of space on screen and there doesn't appear to be a good way to adjust it
+//or put the legend elsewhere
 @Composable
 private fun rememberLegend() = verticalLegend(
     items = chartColors.mapIndexed { index, chartColor ->
@@ -128,6 +131,8 @@ private fun rememberLegend() = verticalLegend(
 internal fun rememberChartStyle(chartColors: List<Color>) =
     rememberChartStyle(columnChartColors = chartColors, lineChartColors = chartColors)
 
+
+//tbd, maybe let users pick their own colors?
 const val COLOR_1_CODE = 0xffb983ff
 const val COLOR_2_CODE = 0xff91b1fd
 const val COLOR_3_CODE = 0xff8fdaff

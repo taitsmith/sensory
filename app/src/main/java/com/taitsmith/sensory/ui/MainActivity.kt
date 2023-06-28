@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), SensorEventListener {
 
+    //we need one of each producer / model to compile the chart
     private var chartEntryModelProducerX = ChartEntryModelProducer(entriesOf(0f))
     private var chartEntryModelProducerY = ChartEntryModelProducer(entriesOf(0f))
     private var chartEntryModelProducerZ = ChartEntryModelProducer(entriesOf(0f))
@@ -79,7 +80,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private lateinit var sensor: Sensor
 
     @OptIn(ExperimentalMaterial3Api::class)
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "RememberReturnType")
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -87,6 +88,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)!!
 
         setContent {
+            //hide the slider and show the text views, as well as changing the fab icon
+            //based on sensor state
             val hideSlider by viewModel.isRecording.observeAsState(initial = false)
 
             Scaffold(
@@ -113,7 +116,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                             } else {
                                 Icon(
                                     painter = painterResource(id = R.drawable.baseline_play_arrow_24),
-                                    contentDescription = "Activate the sensors",
+                                    contentDescription = "Activate the senors",
                                     tint = Color.White
                                 )
                             }
@@ -122,7 +125,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 }
             ) {
                 SensoryTheme {
-                    // A surface container using the 'background' color from the theme
                     Surface(
                         color = MaterialTheme.colorScheme.background,
                         modifier = Modifier.fillMaxHeight()
@@ -148,8 +150,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                         .fillMaxWidth()
                                         .padding(8.dp),
                                     Arrangement.SpaceEvenly
-                                ) {
-                                    AndroidView(
+                                ) { //use an xml view in our compose layout to hold
+                                    AndroidView( //textviews to be updated with new background colors
                                         factory = {
                                             val view = LayoutInflater.from(it)
                                                 .inflate(R.layout.images_layout, null, false)
@@ -184,6 +186,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun setObservers() {
+        //xyz array is updated every time new sensor data comes in. watch it for updates,
+        //do a little string manipulation in the background, and set our textviews to that color
         viewModel.xyzArray.observe(this) {
             try {
                 lifecycleScope.launch {
@@ -196,6 +200,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             }
         }
 
+        //chart entries are only updated on the frequency selected by the user. the way the chart
+        //library works requires both a list of entries for each object being charted, as well as
+        //a producer. observe the entries list in the viewmodel and act accordingly
         viewModel.chartEntries.observe(this) {
             entriesModelX.add(it[0])
             entriesModelY.add(it[1])
@@ -210,7 +217,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         if (p0 != null) {
             viewModel.updateArray(p0.values.asList())
         }
-
     }
 
     override fun onAccuracyChanged(p0: Sensor?, p1: Int) {

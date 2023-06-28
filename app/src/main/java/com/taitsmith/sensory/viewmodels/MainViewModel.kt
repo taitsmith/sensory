@@ -1,6 +1,7 @@
 package com.taitsmith.sensory.viewmodels
 
 import android.app.Application
+import android.graphics.Color
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -60,19 +61,19 @@ class MainViewModel @Inject constructor(
     fun colorX() : Int {
         val x = "%.2f".format(xyzArray.value!![0]).takeLast(2)
         val s = "#FF" + x + "00FF"
-        return android.graphics.Color.parseColor(s)
+        return Color.parseColor(s)
     }
 
     fun colorY() : Int {
         val y = "%.2f".format(xyzArray.value!![1]).takeLast(2)
         val s = "#FFFF" + y + "00"
-        return android.graphics.Color.parseColor(s)
+        return Color.parseColor(s)
     }
 
     fun colorZ() : Int {
         val z = "%.2f".format(xyzArray.value!![2]).takeLast(2)
         val s = "#FF5500$z"
-        return android.graphics.Color.parseColor(s)
+        return Color.parseColor(s)
     }
 
     //timer period is in millis, but it makes more sense to ask the user how many updates they'd
