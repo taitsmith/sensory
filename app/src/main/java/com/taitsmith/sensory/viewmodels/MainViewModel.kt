@@ -30,9 +30,10 @@ class MainViewModel @Inject constructor(
     private var sensor: Sensor =
         sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)!!
 
+    //have some private mutable stuff so we can only set values internally,
+    //public live data to be observed from the outside
     private val _xyzArray = MutableLiveData<List<Float>>()
     var xyzArray: LiveData<List<Float>> = _xyzArray
-
 
     private val _chartEntries = MutableLiveData<MutableList<ChartEntry>>()
     var chartEntries: LiveData<MutableList<ChartEntry>> = _chartEntries
@@ -63,7 +64,7 @@ class MainViewModel @Inject constructor(
     }
 
     //take a boolean to tell us if we should turn on the sensors and start listening,
-    //to be called either on activity pause / resume or button click by user
+    //to be called either on activity pause or button click by user
     fun updateSensorStatus(isRecording: Boolean) {
         if (isRecording) {
             sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
@@ -76,12 +77,36 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    //use the first two digits of the float value that comes back from each axis rotation,
+    //turn it into a hex string, then turn that into a color to be set as a background
+    //as another way to visualise rotation. done on background thread because it happens a ton
+    fun colorX() : Int {
+        val x = "%.2f".format(xyzArray.value!![0]).takeLast(2)
+        val s = "#FF" + x + "00FF"
+        return android.graphics.Color.parseColor(s)
+    }
+
+    fun colorY() : Int {
+        val y = "%.2f".format(xyzArray.value!![1]).takeLast(2)
+        val s = "#FFFF" + y + "00"
+        return android.graphics.Color.parseColor(s)
+    }
+
+    fun colorZ() : Int {
+        val z = "%.2f".format(xyzArray.value!![2]).takeLast(2)
+        val s = "#FF5500$z"
+        return android.graphics.Color.parseColor(s)
+    }
+
     //timer period is in millis, but it makes more sense to ask the user how many updates they'd
     //like per second, and then do the conversion.
     fun updateTimerPeriod(updatesPerSecond: Int) {
         timerPeriodInMillis =  (1000/updatesPerSecond).toLong()
     }
 
+    //the values from the sensors get updated a million times per second, so to make things more
+    //manageable on the system we ask the user how many times per second they'd like the chart updated
+    //and then only update our chart entries live data that frequently
     private fun updateValues() {
         var i = 0
         _chartEntries.value?.clear()

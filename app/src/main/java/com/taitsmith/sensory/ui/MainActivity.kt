@@ -2,20 +2,19 @@ package com.taitsmith.sensory.ui
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
+import android.view.LayoutInflater
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.core.snap
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -27,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,12 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.patrykandpatrick.vico.compose.axis.horizontal.bottomAxis
-import com.patrykandpatrick.vico.compose.axis.vertical.startAxis
-import com.patrykandpatrick.vico.compose.chart.Chart
-import com.patrykandpatrick.vico.compose.chart.line.lineChart
-import com.patrykandpatrick.vico.compose.style.ProvideChartStyle
-import com.patrykandpatrick.vico.core.chart.composed.plus
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.lifecycleScope
 import com.patrykandpatrick.vico.core.entry.ChartEntry
 import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
 import com.patrykandpatrick.vico.core.entry.composed.plus
@@ -48,44 +44,40 @@ import com.taitsmith.sensory.R
 import com.taitsmith.sensory.ui.theme.SensoryTheme
 import com.taitsmith.sensory.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private val COLOR_1_CODE = 0xffb983ff
-    private val COLOR_2_CODE = 0xff91b1fd
-    private val COLOR_3_CODE = 0xff8fdaff
 
-    private val color1 = Color(COLOR_1_CODE)
-    private val color2 = Color(COLOR_2_CODE)
-    private val color3 = Color(COLOR_3_CODE)
-    private val chartColors = listOf(color1, color2, color3)
-
-    var chartEntryModelProducerX = ChartEntryModelProducer(entriesOf(0f))
-    var chartEntryModelProducerY = ChartEntryModelProducer(entriesOf(0f))
+    private var chartEntryModelProducerX = ChartEntryModelProducer(entriesOf(0f))
+    private var chartEntryModelProducerY = ChartEntryModelProducer(entriesOf(0f))
     private var chartEntryModelProducerZ = ChartEntryModelProducer(entriesOf(0f))
 
+    private var entriesModelX: MutableList<ChartEntry> = mutableListOf()
+    private var entriesModelY: MutableList<ChartEntry> = mutableListOf()
+    private var entriesModelZ: MutableList<ChartEntry> = mutableListOf()
+
     private var composedChartEntryModelProducer = (
-            chartEntryModelProducerX
-                    + chartEntryModelProducerY
-                    + chartEntryModelProducerZ
+            chartEntryModelProducerX +
+            chartEntryModelProducerY +
+            chartEntryModelProducerZ
             )
 
-    var entriesModelX: MutableList<ChartEntry> = mutableListOf()
-    var entriesModelY: MutableList<ChartEntry> = mutableListOf()
-    var entriesModelZ: MutableList<ChartEntry> = mutableListOf()
-
-    private var colorsList: List<Float> = mutableListOf(.5F, .5F, .5F)
-
     private val viewModel: MainViewModel by viewModels()
+
+    private lateinit var textViewX: TextView
+    private lateinit var textViewY: TextView
+    private lateinit var textViewZ: TextView
 
     @OptIn(ExperimentalMaterial3Api::class)
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "RememberReturnType")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setObservers()
 
         setContent {
+            val hideSlider by viewModel.isRecording.observeAsState(initial = false)
+
             Scaffold(
                 floatingActionButtonPosition = FabPosition.End,
                 floatingActionButton = {
@@ -96,11 +88,19 @@ class MainActivity : ComponentActivity() {
                             } else viewModel.updateSensorStatus(true)
                         },
                         content = {
-                            Icon(
-                                painter = painterResource(id = R.drawable.baseline_play_arrow_24),
-                                contentDescription = "Activate the sensors",
-                                tint = Color.White
-                            )
+                            if (hideSlider) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.baseline_stop_24),
+                                    contentDescription = "Stop the sensors",
+                                    tint = Color.White
+                                )
+                            } else {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.baseline_play_arrow_24),
+                                    contentDescription = "Activate the sensors",
+                                    tint = Color.White
+                                )
+                            }
                         }
                     )
                 }
@@ -113,57 +113,38 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Column() {
                             Row() {
-                                ProvideChartStyle(rememberChartStyle(chartColors)) {
-                                    val lineChartX = lineChart()
-                                    val lineChartY = lineChart()
-                                    val lineChartZ = lineChart()
-                                    Chart(
-                                        chart = remember(
-                                            lineChartX,
-                                            lineChartY,
-                                            lineChartZ
-                                        ) { lineChartX + lineChartY + lineChartZ },
-                                        chartModelProducer = composedChartEntryModelProducer,
-                                        startAxis = startAxis(),
-                                        bottomAxis = bottomAxis(),
-                                        modifier = Modifier.fillMaxHeight(.60f),
-                                        diffAnimationSpec = snap()
+                                ShowChart(chartProducer = composedChartEntryModelProducer)
+                            }
+                            AnimatedVisibility(visible = !hideSlider) {
+                                Row(
+                                    Modifier
+                                        .fillMaxHeight(.6f)
+                                        .fillMaxWidth(),
+                                    Arrangement.Center
+                                ) {
+                                    SliderView(viewModel = viewModel)
+                                }
+                            }
+                            AnimatedVisibility(visible = hideSlider) {
+                                Row(
+                                    Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    Arrangement.SpaceEvenly
+                                ) {
+                                    AndroidView(
+                                        factory = {
+                                            val view = LayoutInflater.from(it)
+                                                .inflate(R.layout.images_layout, null, false)
+                                            textViewX = view.findViewById(R.id.textViewX)
+                                            textViewY = view.findViewById(R.id.imageViewY)
+                                            textViewZ = view.findViewById(R.id.textViewZ)
+                                            view
+                                        },
+                                        modifier = Modifier.fillMaxSize(),
+                                        update = {}//needs to be here
                                     )
-                                }
-
-                            }
-                            Row(
-                                Modifier
-                                    .fillMaxHeight(.7f)
-                                    .fillMaxWidth(),
-                                Arrangement.Center
-                            ) {
-                                SliderView(viewModel = viewModel)
-                            }
-                            Row(
-                                Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                Arrangement.SpaceEvenly
-                            ){
-                                Box(
-                                    Modifier.background(shape = CircleShape, color = Color.Green)
-                                        .padding(16.dp)
-                                ) {
-                                    Icon(painter = painterResource(id = R.drawable.baseline_emergency_recording_24), contentDescription = "D")
-                                }
-                                Box(
-                                    Modifier.background(shape = CircleShape, color =Color.Red)
-                                        .padding(16.dp)
-                                ) {
-                                    Icon(painter = painterResource(id = R.drawable.baseline_emergency_recording_24), contentDescription = "D")
-                                }
-                                Box(
-                                    Modifier.background(shape = CircleShape, color = Color.Blue)
-                                        .padding(16.dp)
-                                ) {
-                                    Icon(painter = painterResource(id = R.drawable.baseline_emergency_recording_24), contentDescription = "D")
                                 }
                             }
                         }
@@ -171,7 +152,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-
+        setObservers()
     }
 
     override fun onPause() {
@@ -181,9 +162,17 @@ class MainActivity : ComponentActivity() {
 
     private fun setObservers() {
         viewModel.xyzArray.observe(this) {
-            colorsList = it
-            Log.d("COLOR LIST", colorsList[0].toString())
+            try {
+            lifecycleScope.launch {
+                textViewX.setBackgroundColor(viewModel.colorX())
+                textViewY.setBackgroundColor(viewModel.colorY())
+                textViewZ.setBackgroundColor(viewModel.colorZ())
+            }
+            } catch (e: NullPointerException) {
+                e.printStackTrace()
+            }
         }
+
         viewModel.chartEntries.observe(this) {
             entriesModelX.add(it[0])
             entriesModelY.add(it[1])
