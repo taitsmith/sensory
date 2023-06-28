@@ -4,6 +4,7 @@ import android.graphics.Typeface
 import androidx.compose.animation.core.snap
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -36,6 +37,22 @@ import com.patrykandpatrick.vico.core.component.shape.shader.DynamicShaders
 import com.patrykandpatrick.vico.core.entry.ChartEntryModel
 import com.patrykandpatrick.vico.core.entry.composed.ComposedChartEntryModelProducer
 
+
+@Composable
+fun LegendDisplay() {
+    Text(
+        color = color1,
+        text = "X axis rotation"
+    )
+    Text(
+        color = color2,
+        text = "Y axis rotation"
+    )
+    Text(
+        color = color3,
+        text = "Z axis rotation"
+    )
+}
 
 @Composable
 fun ShowChart(chartProducer: ComposedChartEntryModelProducer<ChartEntryModel>) {

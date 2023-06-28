@@ -130,6 +130,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         modifier = Modifier.fillMaxHeight()
                     ) {
                         Column() {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                Arrangement.SpaceEvenly
+                            ){
+                                LegendDisplay()
+                            }
                             Row() {
                                 ShowChart(chartProducer = composedChartEntryModelProducer)
                             }
