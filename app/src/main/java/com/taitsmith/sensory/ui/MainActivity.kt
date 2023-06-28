@@ -1,6 +1,11 @@
 package com.taitsmith.sensory.ui
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.TextView
@@ -48,7 +53,7 @@ import kotlinx.coroutines.launch
 
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), SensorEventListener {
 
     private var chartEntryModelProducerX = ChartEntryModelProducer(entriesOf(0f))
     private var chartEntryModelProducerY = ChartEntryModelProducer(entriesOf(0f))
@@ -70,10 +75,16 @@ class MainActivity : ComponentActivity() {
     private lateinit var textViewY: TextView
     private lateinit var textViewZ: TextView
 
+    private lateinit var sensorManager: SensorManager
+    private lateinit var sensor: Sensor
+
     @OptIn(ExperimentalMaterial3Api::class)
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "RememberReturnType")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)!!
 
         setContent {
             val hideSlider by viewModel.isRecording.observeAsState(initial = false)
@@ -85,7 +96,12 @@ class MainActivity : ComponentActivity() {
                         onClick = {
                             if (viewModel.isRecording.value == true) {
                                 viewModel.updateSensorStatus(false)
-                            } else viewModel.updateSensorStatus(true)
+                                registerSensorListener(false)
+
+                            } else {
+                                viewModel.updateSensorStatus(true)
+                                registerSensorListener(true)
+                            }
                         },
                         content = {
                             if (hideSlider) {
@@ -155,19 +171,26 @@ class MainActivity : ComponentActivity() {
         setObservers()
     }
 
+    private fun registerSensorListener(shouldRegister: Boolean) {
+        if (shouldRegister) {
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        } else sensorManager.unregisterListener(this)
+    }
+
     override fun onPause() {
         super.onPause()
         viewModel.updateSensorStatus(false)
+        sensorManager.unregisterListener(this)
     }
 
     private fun setObservers() {
         viewModel.xyzArray.observe(this) {
             try {
-            lifecycleScope.launch {
-                textViewX.setBackgroundColor(viewModel.colorX())
-                textViewY.setBackgroundColor(viewModel.colorY())
-                textViewZ.setBackgroundColor(viewModel.colorZ())
-            }
+                lifecycleScope.launch {
+                    textViewX.setBackgroundColor(viewModel.colorX())
+                    textViewY.setBackgroundColor(viewModel.colorY())
+                    textViewZ.setBackgroundColor(viewModel.colorZ())
+                }
             } catch (e: NullPointerException) {
                 e.printStackTrace()
             }
@@ -181,6 +204,17 @@ class MainActivity : ComponentActivity() {
             chartEntryModelProducerY.setEntries(entriesModelY)
             chartEntryModelProducerZ.setEntries(entriesModelZ)
         }
+    }
+
+    override fun onSensorChanged(p0: SensorEvent?) {
+        if (p0 != null) {
+            viewModel.updateArray(p0.values.asList())
+        }
+
+    }
+
+    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+        //i need to be here
     }
 }
 
@@ -209,9 +243,7 @@ fun SliderView(viewModel: MainViewModel) {
                 .fillMaxWidth(.8f),
                     Arrangement.Center
         ) {
-            Text(text = "$updatesPerSecond updates per second",
-
-                )
+            Text(text = "$updatesPerSecond updates per second")
         }
     }
 }

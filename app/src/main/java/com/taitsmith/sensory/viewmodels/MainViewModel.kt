@@ -1,11 +1,7 @@
 package com.taitsmith.sensory.viewmodels
 
 import android.app.Application
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -22,13 +18,7 @@ import kotlin.concurrent.fixedRateTimer
 @HiltViewModel
 class MainViewModel @Inject constructor(
     application: Application
-) : AndroidViewModel(application), SensorEventListener {
-
-    private var sensorManager: SensorManager =
-        application.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-
-    private var sensor: Sensor =
-        sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)!!
+) : AndroidViewModel(application) {
 
     //have some private mutable stuff so we can only set values internally,
     //public live data to be observed from the outside
@@ -43,35 +33,22 @@ class MainViewModel @Inject constructor(
 
     private lateinit var timer: Timer
 
-    private var timerPeriodInMillis = 500L
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    var timerPeriodInMillis = 500L
 
-    //this gets called ~10 times per second
-    override fun onSensorChanged(p0: SensorEvent?) {
-        if (p0 != null) {
-            updateArray(p0.values.asList())
-        }
-    }
-
-    private fun updateArray(valueList: List<Float>) {
+    fun updateArray(valueList: List<Float>) {
         viewModelScope.launch {
           _xyzArray.postValue(valueList)
         }
-    }
-
-    //needs to be here, doesn't need to do anything
-    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-
     }
 
     //take a boolean to tell us if we should turn on the sensors and start listening,
     //to be called either on activity pause or button click by user
     fun updateSensorStatus(isRecording: Boolean) {
         if (isRecording) {
-            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
             _isRecording.value = true
             updateValues()
         } else {
-            sensorManager.unregisterListener(this)
             _isRecording.value = false
             timer.cancel()
         }
@@ -107,7 +84,8 @@ class MainViewModel @Inject constructor(
     //the values from the sensors get updated a million times per second, so to make things more
     //manageable on the system we ask the user how many times per second they'd like the chart updated
     //and then only update our chart entries live data that frequently
-    private fun updateValues() {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    fun updateValues() {
         var i = 0
         _chartEntries.value?.clear()
         timer = fixedRateTimer("update values", false, 0L, timerPeriodInMillis) {
